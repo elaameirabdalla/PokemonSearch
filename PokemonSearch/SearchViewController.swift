@@ -32,7 +32,10 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         super.viewDidLoad()
         tableView.delegate = self
         tableView.dataSource = self
+        tableView.accessibilityIdentifier = "SearchResultsTable"
         searchBar.delegate = self
+        
+        // sets up footer and loading indicator for pagination; Loads initial limit of Pokemon
         addPaginationFooter()
         addLoadingIndicator()
         loadPokemon(limit: currentLimit)
@@ -58,7 +61,8 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         view.addSubview(loadingIndicator)
     }
     
-    // Function that loads (limit) many pokemon into TableView.
+    // Function that loads Pokemon into TableView.
+    // Limit parameter defines how many Pokemon will be loaded at once
     // Called upon initial view controller load and upon pagination with updated limit
     func loadPokemon(limit: Int) {
         apiHandler.getPokemonResults(limit: limit) { success, data in
@@ -105,17 +109,19 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         let name = self.results[indexPath.row].name
         apiHandler.searchPokemon(searchTerm: name) { success, data in
             if let data = data, success {
+                // Sets detail view model and performs segue
                 self.detailsPageViewModel = self.apiHandler.handleDetails(data: data)
                 DispatchQueue.main.async {
                     self.performSegue(withIdentifier: "toDetailsPage", sender: self)
                 }
             }
             else if !success, data == nil {
+                // Show error alert for API failure
                 self.showAlert(message: "Something went wrong. Please try again.")
             }
         }
     }
-    
+    // MARK: Prepare function to handle segue into PokemonDetailsViewController. Passes recently updated detailsPageViewModel that configures details page
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if let destination = segue.destination as? PokemonDetailsViewController {
             guard let model = self.detailsPageViewModel else {
@@ -133,14 +139,20 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
                 if let data = data, success {
                     let resultModel = self.apiHandler.handleDetails(data: data)
                     if resultModel == nil {
+                        // Displays error alert if invalid search term
                         self.showAlert(message: "No Pokemon found. Please try again.")
                     }
                     else {
+                        // Segues to details page for specific pokemon
                         self.detailsPageViewModel = self.apiHandler.handleDetails(data: data)
                         DispatchQueue.main.async {
                             self.performSegue(withIdentifier: "toDetailsPage", sender: self)
                         }
                     }
+                }
+                else if !success, data == nil {
+                    // Show error alert for API failure
+                    self.showAlert(message: "Something went wrong. Please try again.")
                 }
             }
         }
@@ -155,15 +167,13 @@ class SearchViewController: UIViewController, UITableViewDelegate, UITableViewDa
         
         // Triggers API call for more results if user scrolls beyond last cell (threshold)
         if distanceDragged > dragThreshold {
+            // Calls loadPokemon with incremented limit to display more results. Shows and hides loading indicator
             loadingIndicator.isHidden = false
             currentLimit += 20
             loadPokemon(limit: currentLimit)
-            // Reload tableView to show new results
             DispatchQueue.main.async {
-                self.tableView.reloadData()
                 self.loadingIndicator.isHidden = true
             }
-            
         }
     }
     

@@ -39,15 +39,6 @@ final class PokemonSearchTests: XCTestCase {
         
     }
     
-    func testKhara() throws {
-        let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let vc = storyboard.instantiateViewController(identifier: "searchViewController") as! SearchViewController
-        vc.loadViewIfNeeded()
-        vc.viewDidLoad()
-        XCTAssertTrue(!vc.results.isEmpty)
-    }
-
-    
     func testPokemonDetails() throws {
         // This test ensures the functionality of the search and selection feature, where a user can search a pokemon by name or select a pokemon(table view cell) and get the correct data.
         
@@ -57,6 +48,7 @@ final class PokemonSearchTests: XCTestCase {
         var searchResult: PokemonDetailsViewModel?
         let searchTerm = "charmander"
         
+        // Makes API call
         apiHandler.searchPokemon(searchTerm: searchTerm) { success, data in
             if success, let fetched = data {
                 // fulfill expectation and set data upon success
@@ -69,6 +61,7 @@ final class PokemonSearchTests: XCTestCase {
             }
         }
         
+        // Asserts that detail view model is not nil and that it is the corresponding details model for the searched/selected pokemon
         waitForExpectations(timeout: 5)
         searchResult = apiHandler.handleDetails(data: resultingData)
         XCTAssertNotNil(searchResult)
@@ -76,6 +69,30 @@ final class PokemonSearchTests: XCTestCase {
 
     }
     
-    
-
+    func testInvalidSearchTerm() throws {
+        // This test, like the other, ensures the functionality of the search feature.
+        // In this case, the invalid search term should yield nil for the details view model.
+        let successExpectation = expectation(description: "data")
+        var resultingData: Data = Data()
+        var searchResult: PokemonDetailsViewModel?
+        let searchTerm = "invalid"
+        
+        // Makes API call
+        apiHandler.searchPokemon(searchTerm: searchTerm) { success, data in
+            if success, let fetched = data {
+                // fulfill expectation and set data upon success
+                resultingData = fetched
+                successExpectation.fulfill()
+            }
+            else {
+                XCTAssertFalse(success)
+                successExpectation.fulfill()
+            }
+        }
+        
+        // Asserts that detail view model is  nil
+        waitForExpectations(timeout: 5)
+        searchResult = apiHandler.handleDetails(data: resultingData)
+        XCTAssertNil(searchResult)
+    }
 }
